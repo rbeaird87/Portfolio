@@ -1,3 +1,8 @@
+------------------------------------------------------------------------------------------------------------
+/* THIS STORED PROCEDURE LOADS HISTORIC AR (ACCOUNTS RECEIVABLE) EHR (ELECTRONIC HEALTH RECORD) DATA FROM A TABLE AND PUTS INTO A STANDARDIZED METRIC FORMAT */
+------------------------------------------------------------------------------------------------------------
+
+
 DECLARE @QueryLookbackDays int = 1 --use 1 month for monthly load or 1 day for daily
 DECLARE @QueryBeginDate date = DATEADD(MONTH,-1,DATEFROMPARTS(YEAR(DATEADD(MONTH,-@QueryLookbackDays,GETDATE())),MONTH(DATEADD(MONTH,-@QueryLookbackDays,GETDATE())),1))  --'2024-01-01'--
 DECLARE @QueryEndDate date = GETDATE()
