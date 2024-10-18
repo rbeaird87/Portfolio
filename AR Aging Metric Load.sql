@@ -12,8 +12,8 @@ BEGIN TRY
 PRINT @DeleteMessage
 DELETE rpt.MetricValues
 	WHERE 1=1
-	AND MetricValueDate >= @QueryBeginDate 
-	AND MetricID = 11
+		AND MetricValueDate >= @QueryBeginDate 
+		AND MetricID = 11
 
 ------------------------------------------------------------------------------------------------------------
 /* Insert new metric values */
@@ -45,14 +45,14 @@ INSERT INTO rpt.MetricValues(
 
 
 SELECT 
-	11										AS MetricID		 
-	,d.FirstDayOfMonth						AS MetricValueDate -- Snapshot date
-	,ar.TransactionDataSourceID				AS DataSourceID
-	,ar.TransactionLocationID				AS LocationID 
-	,ar.TransactionDepartmentID				AS [DepartmentID]
-	,ar.TransactionBillingProviderID		AS [ProviderID]
-	,pt.PracticeID							AS [PracticeID] --
-	,ar.CurrentPayerID						AS PayerID
+	11									AS MetricID		 
+	,d.FirstDayOfMonth							AS MetricValueDatE
+	,ar.TransactionDataSourceID						AS DataSourceID
+	,ar.TransactionLocationID						AS LocationID 
+	,ar.TransactionDepartmentID						AS [DepartmentID]
+	,ar.TransactionBillingProviderID					AS [ProviderID]
+	,pt.PracticeID								AS [PracticeID]
+	,ar.CurrentPayerID							AS PayerID
 	,NULL									AS ServiceLine
 	,CASE
 		WHEN ar.TransactionServiceDateAge BETWEEN 0 AND 30
@@ -66,16 +66,16 @@ SELECT
 		WHEN ar.TransactionServiceDateAge > 120 
 			THEN '121+'
 		ELSE NULL
-	END										AS [ReportGroup1] -- AR Aging Bucket, ar.TransactionARAgingBucket
+	END									AS [ReportGroup1] -- AR Aging Bucket, ar.TransactionARAgingBucket
 	,'Snapshot'								AS [ReportGroup2] -- Snapshot vs current, ar.PeriodCategory
-	,ar.ARHistoryDate						AS [ReportGroup3] -- Snapshot date
+	,ar.ARHistoryDate							AS [ReportGroup3] -- Snapshot date
 	,null									AS [ReportGroup4]
 	,null									AS [ReportGroup5]
 	,null									AS [ReportGroup6]
 	,null									AS [ReportGroup7]
 	,null									AS [MetricValueNumerator]
 	,null									AS [MetricValueDenominator]
-	,sum(ar.TransactionARAmountActive)		AS [MetricValue] --Active AR
+	,sum(ar.TransactionARAmountActive)					AS [MetricValue] --Active AR
 	,GETDATE()								AS [UpdateDatetime]
 FROM rpt.ARHistoryPB ar
 
@@ -88,10 +88,12 @@ LEFT JOIN dim.Departments dt
 	left join map.ProviderLinking pl ON pl.ChildProviderID = ar.TransactionBillingProviderID
 	left join map.PracticeDepartments pd ON pd.DepartmentID = ar.TransactionDepartmentID
 	left join map.vPracticeProviders pp ON pp.ParentProviderID = pl.ParentProviderID
-										AND pp.PracticeProviderEffectiveDate <= ar.TransactionPostDate 
-										AND pp.PracticeProviderEndDate >= ar.TransactionPostDate
-										AND ((ar.TransactionBillingProviderID in ('1~19898','5~126867','1~19711','5~125582') AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null AND ar.TransactionBillingProviderID = pp.ProviderID)))
-											  OR ar.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582'))
+		AND pp.PracticeProviderEffectiveDate <= ar.TransactionPostDate 
+		AND pp.PracticeProviderEndDate >= ar.TransactionPostDate
+		AND ((ar.TransactionBillingProviderID in ('1~19898','5~126867','1~19711','5~125582') 
+			AND (pp.PracticeID = pd.PracticeID OR (pd.PracticeID is null 
+				AND ar.TransactionBillingProviderID = pp.ProviderID)))
+			OR ar.TransactionBillingProviderID not in ('1~19898','5~126867','1~19711','5~125582'))
 	left join dim.Practices pt ON pt.PracticeID = COALESCE(pd.PracticeID,pp.PracticeID)
 --LEFT JOIN dim.dates gd
 --	ON FORMAT(GETDATE(), 'yyyy-dd-MM') = FORMAT(gd.[Date], 'yyyy-dd-MM')
