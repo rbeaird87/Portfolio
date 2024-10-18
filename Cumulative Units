@@ -1,3 +1,5 @@
+// basic DAX calculation that sums up cumulative units sold up to a certain date
+
 (SUM) UnitsCumulative = 
 
 VAR FinDate =
