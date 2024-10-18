@@ -1,5 +1,5 @@
 ------------------------------------------------------------------------------------------------------------
-/* THIS STORED PROCEDURE LOADS HISTORIC AR (ACCOUNTS RECEIVABLE) EHR (ELECTRONIC HEALTH RECORD) DATA FROM A TABLE AND PUTS INTO A STANDARDIZED METRIC FORMAT */
+/* THIS STORED PROCEDURE LOADS EHR (ELECTRONIC HEALTH RECORD) HISTORIC AR (ACCOUNTS RECEIVABLE) DATA FROM A SQL TABLE AND PUTS INTO A STANDARDIZED METRIC FORMAT AND LOADS THAT INTO A DESIGNATED METRICS TABLE */
 ------------------------------------------------------------------------------------------------------------
 
 
