@@ -1,4 +1,6 @@
-CREATE PROCEDURE rpt.spReloadMeditechCensusHistory_INCREMENTAL AS
+------------------------------------------------------------------------------------------------------------
+/* THIS CODE BUILDS A TABLE THAT ACTS AS A PREVIOUS-DAY RECORD OF OCCUPANCY OF ALL HOSPITAL BEDS */
+------------------------------------------------------------------------------------------------------------
 
 ------------------------------------------------------------------------------------------------------------
 /* Declare date variables */
@@ -37,14 +39,14 @@ INTO #accomodations
 FROM MEDITECH.Testdb.[npr].[dmisaccommodation];
 
 ------------------------------------------------------------------------------------------------------------
-/* Build Pivoted ADT Event table */
+/* Build Pivoted ADT Event temp table */
 ------------------------------------------------------------------------------------------------------------
 PRINT 'Building ADT event table...'
 DROP TABLE IF EXISTS #adtpivot
 SELECT
 	CONCAT([ADTEventVisitID],'|',CAST([ADTEventDatetime] AS date))	AS ADTVisitDateID
 	,[ADTEventVisitID]
-	,CAST([ADTEventDatetime] AS date)								AS ADTEventDate
+	,CAST([ADTEventDatetime] AS date)									AS ADTEventDate
 	,[ADTEventDatasourceID]
 	,[ADTEventLocationID]
 	,[ADTEventRoomID]
@@ -69,12 +71,12 @@ SELECT
 		ELSE 0
 	END) > 0 THEN 1 ELSE 0 END)										AS [CensusIsDischarge]
 	,MAX([ADTEventTransferTo])										AS [ADTEventTransferTo]
-	,MAX([ADTEventTransferFrom])									AS [ADTEventTransferFrom]
+	,MAX([ADTEventTransferFrom])										AS [ADTEventTransferFrom]
 	,MAX(CASE 
 		WHEN ADTEventSubtype = 'Discharge' 
 			THEN ADTEventDatetime 
 		ELSE NULL 
-	END)															AS DischargeDatetime
+	END)													AS DischargeDatetime
 INTO #adtpivot
 FROM [fact].[ADTEvents]
 
@@ -165,34 +167,34 @@ INSERT INTO [EDW].[rpt].[CensusHistory](
 /* Query for non-discharged census */
 ------------------------------------------------------------------------------------------------------------
 SELECT
-	CONCAT(r.RoomID,'|',@currdate)									AS [CensusID]
-	,7																AS [CensusDatasourceID]
-	,@currdate														AS [CensusDate] --CAST(pdc.roomcensusdateid AS date)
+	CONCAT(r.RoomID,'|',@currdate)								AS [CensusID]
+	,7											AS [CensusDatasourceID]
+	,@currdate										AS [CensusDate] --CAST(pdc.roomcensusdateid AS date)
 	,DATEADD(millisecond, -3, @currdatetime)						AS [CensusMidnight]
-	,r.RoomLocationID												AS [CensusLocationID]
-	,r.RoomID														AS [CensusRoomID]
-	,a.patientid													AS [CensusPatientID]
-	,a.visitid														AS [CensusVisitID]
-	,a.accountnumber												AS [CensusVisitReferenceNumber]
-	,a.admitdatetime												AS [CensusVisitAdmitDatetime]
-	,NULL															AS [CensusVisitDischargeDatetime]
-	,rt.[name]														AS [CensusCurrentServiceLine] -- location description?
-	,acc.[name]														AS [CensusCurrentLevelOfCare] -- care description?
-	,r.RoomIsLicensed												AS [CensusIsRoomLicensed]
-	,adt.CensusIsAdmit												AS [CensusIsAdmit]
-	,adt.CensusIsLOABegin											AS [CensusIsLOABegin]
-	,adt.CensusIsLOAReturn											AS [CensusIsLOAReturn]
+	,r.RoomLocationID									AS [CensusLocationID]
+	,r.RoomID										AS [CensusRoomID]
+	,a.patientid										AS [CensusPatientID]
+	,a.visitid										AS [CensusVisitID]
+	,a.accountnumber									AS [CensusVisitReferenceNumber]
+	,a.admitdatetime									AS [CensusVisitAdmitDatetime]
+	,NULL											AS [CensusVisitDischargeDatetime]
+	,rt.[name]										AS [CensusCurrentServiceLine]
+	,acc.[name]										AS [CensusCurrentLevelOfCare]
+	,r.RoomIsLicensed									AS [CensusIsRoomLicensed]
+	,adt.CensusIsAdmit									AS [CensusIsAdmit]
+	,adt.CensusIsLOABegin									AS [CensusIsLOABegin]
+	,adt.CensusIsLOAReturn									AS [CensusIsLOAReturn]
 	,CASE
 		WHEN a.loastatus = 'Y'
 			THEN 1
 		ELSE 0
-	END																AS [CensusIsLOA]
-	,0																AS [CensusIsDischarge]
-	,1																AS [CensusIsActive]
-	,1																AS [CensusCount] --when IsLOA = 1 then 0?
-	,NULL															AS [CensusCountOverride]
-	,NULL															AS [CensusCountOverrideDatetime]
-	,GETDATE()														AS [CensusUpdatedDatetime]
+	END											AS [CensusIsLOA]
+	,0											AS [CensusIsDischarge]
+	,1											AS [CensusIsActive]
+	,1											AS [CensusCount] 
+	,NULL											AS [CensusCountOverride]
+	,NULL											AS [CensusCountOverrideDatetime]
+	,GETDATE()										AS [CensusUpdatedDatetime]
 	--,'||||||||ADT|||||||||||'
 	--,adt.*
 FROM dim.Rooms r
@@ -259,34 +261,34 @@ SELECT
 		WHEN r.RoomName IN ( SELECT RoomName FROM EmptyDischargedRooms)
 			THEN CONCAT(r.RoomID,'|',@currdate)-- discharged patient, empty room
 		ELSE CONCAT(r.RoomID,'|',@currdate,'|d')-- discharged patient, refilled room (will require duplicate line for room)
-	END																AS [CensusID]
-	,7																AS [CensusDatasourceID]
-	,@currdate														AS [CensusDate]
-	,DATEADD(millisecond, -3, @currdatetime)						AS [CensusMidnight]
-	,r.RoomLocationID												AS [CensusLocationID]
-	,r.RoomID														AS [CensusRoomID]
-	,a.patientid													AS [CensusPatientID]
-	,a.visitid														AS [CensusVisitID]
-	,a.accountnumber												AS [CensusVisitReferenceNumber]
-	,a.admitdatetime												AS [CensusVisitAdmitDatetime]
-	,adt.DischargeDatetime											AS [CensusVisitDischargeDatetime]
-	,rt.[name]														AS [CensusCurrentServiceLine] -- location description?
-	,acc.[name]														AS [CensusCurrentLevelOfCare] -- care description?
-	,r.RoomIsLicensed												AS [CensusIsRoomLicensed]
-	,adt.CensusIsAdmit												AS [CensusIsAdmit]
-	,adt.CensusIsLOABegin											AS [CensusIsLOABegin]
-	,0																AS [CensusIsLOA]
-	,adt.CensusIsLOAReturn											AS [CensusIsLOAReturn]
-	,1																AS [CensusIsDischarge]
-	,1																AS [CensusIsActive]
+	END												AS [CensusID]
+	,7												AS [CensusDatasourceID]
+	,@currdate											AS [CensusDate]
+	,DATEADD(millisecond, -3, @currdatetime)							AS [CensusMidnight]
+	,r.RoomLocationID										AS [CensusLocationID]
+	,r.RoomID											AS [CensusRoomID]
+	,a.patientid											AS [CensusPatientID]
+	,a.visitid											AS [CensusVisitID]
+	,a.accountnumber										AS [CensusVisitReferenceNumber]
+	,a.admitdatetime										AS [CensusVisitAdmitDatetime]
+	,adt.DischargeDatetime										AS [CensusVisitDischargeDatetime]
+	,rt.[name]											AS [CensusCurrentServiceLine] -- location description?
+	,acc.[name]											AS [CensusCurrentLevelOfCare] -- care description?
+	,r.RoomIsLicensed										AS [CensusIsRoomLicensed]
+	,adt.CensusIsAdmit										AS [CensusIsAdmit]
+	,adt.CensusIsLOABegin										AS [CensusIsLOABegin]
+	,0												AS [CensusIsLOA]
+	,adt.CensusIsLOAReturn										AS [CensusIsLOAReturn]
+	,1												AS [CensusIsDischarge]
+	,1												AS [CensusIsActive]
 	,CASE
 		WHEN r.RoomName IN ( SELECT RoomName FROM EmptyDischargedRooms)
 			THEN 0 -- discharged patient, empty room
 		ELSE 1 -- discharged patient, refilled room
-	END																AS [CensusCount]
-	,NULL															AS [CensusCountOverride]
-	,NULL															AS [CensusCountOverrideDatetime]
-	,GETDATE()														AS [CensusUpdatedDatetime]
+	END												AS [CensusCount]
+	,NULL												AS [CensusCountOverride]
+	,NULL												AS [CensusCountOverrideDatetime]
+	,GETDATE()											AS [CensusUpdatedDatetime]
 	--,'|||||||ADT|||||||||||'
 	--,adt.*
 FROM dim.Rooms r
