@@ -1,0 +1,20 @@
+(SUM) UnitsCumulative = 
+
+VAR FinDate =
+    MAX ( 'dim Dates (OrderDate)'[Date])
+VAR StartDate =
+    MIN ( 'dim Dates (OrderDate)'[Date])
+VAR LastSaleDate =
+    CALCULATE (
+        MAX ( 'fact CandySales'[OrderDate] ),
+        REMOVEFILTERS ()
+    )
+VAR Result =
+    IF (
+        StartDate <= LastSaleDate,
+        CALCULATE (
+            'fact CandySales'[(SUM) UnitsTotal],
+            'dim Dates (OrderDate)'[Date] <= FinDate
+        )
+    )
+RETURN    Result
